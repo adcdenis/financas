@@ -3,6 +3,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "../components/ui/Button";
+import { Checkbox } from "../components/ui/Checkbox";
 import { Input } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
 import { formatCurrency, parseCurrency } from "../lib/utils";
@@ -11,6 +12,7 @@ import { useAccounts, useCreateAccount, useDeleteAccount, useUpdateAccount } fro
 const schema = z.object({
   name: z.string().min(2, "Informe o nome"),
   initial_balance: z.string().default("0"),
+  include_in_monthly_summary: z.boolean().default(true),
 });
 
 type AccountForm = z.infer<typeof schema>;
@@ -22,14 +24,15 @@ const SettingsAccountsPage = () => {
   const deleteAccount = useDeleteAccount();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const form = useForm<AccountForm>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", initial_balance: "0" },
+    defaultValues: { name: "", initial_balance: "0", include_in_monthly_summary: true },
   });
 
   const openCreate = () => {
-    form.reset({ name: "", initial_balance: "0" });
+    form.reset({ name: "", initial_balance: "0", include_in_monthly_summary: true });
     setEditingId(null);
     setModalOpen(true);
   };
@@ -37,7 +40,11 @@ const SettingsAccountsPage = () => {
   const openEdit = (id: string) => {
     const account = accounts.find((item) => item.id === id);
     if (!account) return;
-    form.reset({ name: account.name, initial_balance: String(account.initial_balance ?? 0) });
+    form.reset({
+      name: account.name,
+      initial_balance: String(account.initial_balance ?? 0),
+      include_in_monthly_summary: account.include_in_monthly_summary ?? true,
+    });
     setEditingId(id);
     setModalOpen(true);
   };
@@ -47,6 +54,7 @@ const SettingsAccountsPage = () => {
       name: values.name,
       initial_balance: parseCurrency(values.initial_balance),
       archived: false,
+      include_in_monthly_summary: values.include_in_monthly_summary,
     };
     if (editingId) {
       await updateAccount.mutateAsync({ id: editingId, ...payload });
@@ -55,6 +63,14 @@ const SettingsAccountsPage = () => {
     }
     setModalOpen(false);
   });
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    await deleteAccount.mutateAsync(deleteId);
+    setDeleteId(null);
+  };
+
+  const deleteAccountName = deleteId ? accounts.find((account) => account.id === deleteId)?.name : null;
 
   return (
     <div className="px-6 pb-10">
@@ -79,7 +95,7 @@ const SettingsAccountsPage = () => {
                   <Button variant="secondary" onClick={() => openEdit(account.id)}>
                     Editar
                   </Button>
-                  <Button variant="ghost" onClick={() => deleteAccount.mutate(account.id)}>
+                  <Button variant="ghost" onClick={() => setDeleteId(account.id)}>
                     Remover
                   </Button>
                 </div>
@@ -111,7 +127,28 @@ const SettingsAccountsPage = () => {
             Saldo inicial
             <Input {...form.register("initial_balance")} />
           </label>
+          <Checkbox label="Incluir no resumo do mes" {...form.register("include_in_monthly_summary")} />
         </form>
+      </Modal>
+
+      <Modal
+        open={Boolean(deleteId)}
+        onClose={() => setDeleteId(null)}
+        title="Remover conta"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeleteId(null)}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleDelete}>
+              Confirmar remocao
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-ink-600">
+          Tem certeza que deseja remover a conta {deleteAccountName ? `"${deleteAccountName}"` : "selecionada"}?
+        </p>
       </Modal>
     </div>
   );

@@ -81,6 +81,7 @@ const SettingsCategoriesPage = () => {
   };
 
   const hasChildren = (id: string) => categories.some((category) => category.parent_id === id);
+  const deleteCategoryName = deleteId ? categories.find((category) => category.id === deleteId)?.name : null;
 
   const renderNode = (node: (typeof categoryTree)[number], depth = 0) => (
     <div key={node.id} className="space-y-1">
@@ -183,6 +184,9 @@ const SettingsCategoriesPage = () => {
           </p>
         ) : (
           <div className="space-y-3">
+            <p className="text-sm text-ink-600">
+              Tem certeza que deseja remover a categoria {deleteCategoryName ? `"${deleteCategoryName}"` : "selecionada"}?
+            </p>
             <p className="text-sm text-ink-600">Deseja mover as transacoes para outra categoria?</p>
             <Select value={moveToId ?? ""} onChange={(event) => setMoveToId(event.target.value || null)}>
               <option value="">Nao mover</option>

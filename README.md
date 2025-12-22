@@ -1,4 +1,4 @@
-# Finanças Pessoais Desktop
+# Finanças Desktop
 
 Uma aplicação moderna de gerenciamento financeiro pessoal construída com React, TypeScript e Supabase. Permite o controle completo de suas finanças com recursos avançados de organização, rastreamento e análise.
 

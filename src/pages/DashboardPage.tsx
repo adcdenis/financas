@@ -82,6 +82,15 @@ const DashboardPage = () => {
     return map;
   }, [accounts, transactions]);
 
+  const monthlySummaryTotal = useMemo(
+    () =>
+      accounts.reduce((sum, account) => {
+        if (!account.include_in_monthly_summary) return sum;
+        return sum + (balances[account.id] ?? account.initial_balance ?? 0);
+      }, 0),
+    [accounts, balances]
+  );
+
   const handleToggleTransaction = (id: string) => {
     setSelectedTransactionIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   };
@@ -96,7 +105,7 @@ const DashboardPage = () => {
         <div className="rounded-2xl bg-ink-900 p-4 text-white shadow-card">
           <div className="text-xs uppercase tracking-wide text-ink-200">Resumo do mes</div>
           <div className="mt-2 text-2xl font-semibold">
-            {formatCurrency(Object.values(balances).reduce((sum, value) => sum + value, 0))}
+            {formatCurrency(monthlySummaryTotal)}
           </div>
         </div>
         <SidebarAccounts

@@ -1,4 +1,4 @@
--- Seed data for Financas Desktop
+-- Seed data for Finanças Desktop
 -- Replace USER_ID with your auth user id before running.
 
 DO $$

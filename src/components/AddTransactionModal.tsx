@@ -59,6 +59,7 @@ interface AddTransactionModalProps {
 }
 
 type EditScope = "only" | "from_here" | "from_first";
+type TransactionInsert = Omit<Transaction, "id" | "user_id" | "created_at">;
 
 const AddTransactionModal = ({ open, onClose, accounts, categories, transaction }: AddTransactionModalProps) => {
   const queryClient = useQueryClient();
@@ -375,7 +376,7 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
     const baseDate = new Date(`${values.date}T00:00:00`);
     const amount = parseCurrency(values.amount);
 
-    const basePayload = {
+    const basePayload: TransactionInsert = {
       date: values.date,
       description: values.description,
       note: values.note || null,
@@ -389,8 +390,8 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
       installment_group_id: null,
       installment_index: null,
       installment_total: null,
-      recurrence_group_id: null as string | null,
-      recurrence_rule: null as Record<string, unknown> | null,
+      recurrence_group_id: null,
+      recurrence_rule: null,
     };
 
     if (isEditing && transaction) {
@@ -434,7 +435,7 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
       return;
     }
 
-    const rows: typeof basePayload[] = [];
+    const rows: TransactionInsert[] = [];
 
     if (repeatMode === "installment") {
       const groupId = crypto.randomUUID();

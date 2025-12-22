@@ -1,4 +1,4 @@
--- Supabase schema for Financas Desktop
+-- Supabase schema for Finanças Desktop
 
 create type transaction_type as enum ('expense', 'income', 'transfer');
 create type category_allowed_type as enum ('expense', 'income', 'both');
@@ -15,6 +15,7 @@ create table if not exists accounts (
   name text not null,
   initial_balance numeric(12,2) not null default 0,
   archived boolean not null default false,
+  include_in_monthly_summary boolean not null default true,
   created_at timestamptz not null default now()
 );
 

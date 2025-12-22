@@ -6,6 +6,7 @@ export interface Account {
   name: string;
   initial_balance: number;
   archived: boolean;
+  include_in_monthly_summary: boolean;
   created_at: string;
 }
 

@@ -13,7 +13,7 @@ const AppLayout = () => {
   return (
     <div className="min-h-screen">
       <header className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
-        <div className="text-lg font-semibold text-ink-900">Financas Desktop</div>
+        <div className="text-lg font-semibold text-ink-900">Finanças Desktop</div>
         <nav className="flex flex-wrap items-center gap-3 text-sm text-ink-600">
           <NavLink to="/app" className={({ isActive }) => (isActive ? "text-ink-900" : "")}>
             Dashboard
