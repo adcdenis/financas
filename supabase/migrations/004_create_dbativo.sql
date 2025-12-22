@@ -3,3 +3,6 @@ create table if not exists dbativo (
   ativo boolean not null default true,
   data_hora timestamptz not null default now()
 );
+
+insert into dbativo (ativo, data_hora)
+values (true, now());
