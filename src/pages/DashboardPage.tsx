@@ -21,9 +21,11 @@ import {
 import { expandCategorySelection } from "../lib/categoryTree";
 import { formatCurrency } from "../lib/utils";
 import type { Transaction } from "../types";
+import appPackage from "../../package.json";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  const appVersion = appPackage.version;
   const [month, setMonth] = useState(startOfMonth(new Date()));
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
@@ -192,7 +194,7 @@ const DashboardPage = () => {
               onToggleSelectAll={handleToggleAllTransactions}
             />
             <div className="px-2 text-right text-xs text-ink-400">
-              Copyright © 2025 Finanças Desktop · v1.1.0
+              Copyright © 2025 Finanças Desktop · v{appVersion}
             </div>
           </>
         )}
@@ -213,3 +215,4 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
+
