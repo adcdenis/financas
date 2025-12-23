@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Financas">
+  <rect width="64" height="64" rx="14" fill="#F4EFE7"/>
+  <rect x="12" y="16" width="40" height="8" rx="4" fill="#1F2937"/>
+  <rect x="12" y="30" width="40" height="8" rx="4" fill="#1F2937"/>
+  <rect x="12" y="44" width="28" height="8" rx="4" fill="#1F2937"/>
+  <circle cx="48" cy="48" r="9" fill="#E8B949"/>
+  <path d="M44.5 48.5l2.5 2.5 5.5-6" fill="none" stroke="#1F2937" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

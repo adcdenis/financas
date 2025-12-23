@@ -177,19 +177,24 @@ const DashboardPage = () => {
         {accountsLoading || categoriesLoading || transactionsLoading ? (
           <div className="rounded-2xl bg-white/90 p-8 text-center text-sm text-ink-500 shadow-soft">Carregando...</div>
         ) : (
-          <TransactionsTable
-            transactions={transactions}
-            accounts={accounts}
-            categories={categories}
-            onToggleCleared={(id, cleared) => updateTransaction.mutate({ id, cleared })}
-            onEdit={(transaction) => {
-              setEditingTransaction(transaction);
-              setModalOpen(true);
-            }}
-            selectedIds={selectedTransactionIds}
-            onToggleSelect={handleToggleTransaction}
-            onToggleSelectAll={handleToggleAllTransactions}
-          />
+          <>
+            <TransactionsTable
+              transactions={transactions}
+              accounts={accounts}
+              categories={categories}
+              onToggleCleared={(id, cleared) => updateTransaction.mutate({ id, cleared })}
+              onEdit={(transaction) => {
+                setEditingTransaction(transaction);
+                setModalOpen(true);
+              }}
+              selectedIds={selectedTransactionIds}
+              onToggleSelect={handleToggleTransaction}
+              onToggleSelectAll={handleToggleAllTransactions}
+            />
+            <div className="px-2 text-right text-xs text-ink-400">
+              Copyright © 2025 Finanças Desktop · v1.1.0
+            </div>
+          </>
         )}
       </main>
 

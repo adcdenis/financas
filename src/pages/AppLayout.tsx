@@ -1,7 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { Button } from "../components/ui/Button";
-import packageJson from "../../package.json";
 
 const AppLayout = () => {
   const navigate = useNavigate();
@@ -10,8 +9,6 @@ const AppLayout = () => {
     await supabase.auth.signOut();
     navigate("/login");
   };
-
-  const appVersion = packageJson.version ?? "0.0.0";
 
   return (
     <div className="min-h-screen">
@@ -39,9 +36,6 @@ const AppLayout = () => {
         </nav>
       </header>
       <Outlet />
-      <footer className="px-6 py-6 text-center text-xs text-ink-500">
-        Copyright © {new Date().getFullYear()} Finanças Desktop · v{appVersion}
-      </footer>
     </div>
   );
 };

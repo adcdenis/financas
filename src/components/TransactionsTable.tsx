@@ -149,9 +149,6 @@ const TransactionsTable = ({
           })}
         </tbody>
       </table>
-      <div className="border-t border-sand-100 px-4 py-3 text-xs text-ink-400">
-        Saldo do mes anterior nao incluido.
-      </div>
     </div>
   );
 };
