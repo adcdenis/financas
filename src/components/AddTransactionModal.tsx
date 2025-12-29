@@ -14,6 +14,7 @@ import { Checkbox } from "./ui/Checkbox";
 import { parseCurrency, toDateInputValue } from "../lib/utils";
 import { useCreateTransactions, useUpdateTransaction } from "../features/transactions/transactionsHooks";
 import { useCreateCategory } from "../features/categories/categoriesHooks";
+import { useCreateAccount } from "../features/accounts/accountsHooks";
 import { supabase } from "../lib/supabaseClient";
 
 const transactionSchema = z
@@ -33,16 +34,25 @@ const transactionSchema = z
   .superRefine((values, ctx) => {
     if (values.type === "transfer") {
       if (!values.account_from_id || !values.account_to_id) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Selecione as contas de origem e destino" });
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Selecione a conta de origem",
+          path: ["account_from_id"],
+        });
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Selecione a conta de destino",
+          path: ["account_to_id"],
+        });
       }
       return;
     }
 
     if (!values.account_id) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Selecione a conta" });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Selecione a conta", path: ["account_id"] });
     }
     if (!values.category_id) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Selecione a categoria" });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Selecione a categoria", path: ["category_id"] });
     }
   });
 
@@ -66,6 +76,7 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
   const createTransactions = useCreateTransactions();
   const updateTransaction = useUpdateTransaction();
   const createCategory = useCreateCategory();
+  const createAccount = useCreateAccount();
   const [repeatMode, setRepeatMode] = useState<RepeatMode>("none");
   const [editScope, setEditScope] = useState<EditScope>("only");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -80,6 +91,13 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryParent, setNewCategoryParent] = useState<string | null>(null);
   const [newCategoryType, setNewCategoryType] = useState<"expense" | "income" | "both">("expense");
+  const [creatingAccount, setCreatingAccount] = useState(false);
+  const [newAccountName, setNewAccountName] = useState("");
+  const [newAccountInitialBalance, setNewAccountInitialBalance] = useState("0");
+  const [newAccountIncludeInMonthlySummary, setNewAccountIncludeInMonthlySummary] = useState(true);
+  const [newAccountTarget, setNewAccountTarget] = useState<
+    "account_id" | "account_from_id" | "account_to_id" | null
+  >(null);
 
   const form = useForm<TransactionForm>({
     resolver: zodResolver(transactionSchema),
@@ -100,6 +118,18 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
   const hasRecurrence = Boolean(transaction?.recurrence_rule);
   const isInstallmentEditable = isEditing && hasInstallments;
   const currentInstallmentIndex = transaction?.installment_index ?? 1;
+  const errors = form.formState.errors;
+
+  const renderError = (message?: string) =>
+    message ? <p className="text-xs text-red-600">{message}</p> : null;
+  const accountTargetError =
+    newAccountTarget === "account_from_id"
+      ? errors.account_from_id?.message
+      : newAccountTarget === "account_to_id"
+        ? errors.account_to_id?.message
+        : newAccountTarget === "account_id"
+          ? errors.account_id?.message
+          : undefined;
 
   const shiftByUnit = (date: Date, step: number, unit: string) => {
     if (unit === "week") return addWeeks(date, step);
@@ -164,6 +194,11 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
       setNewCategoryName("");
       setNewCategoryParent(null);
       setNewCategoryType("expense");
+      setCreatingAccount(false);
+      setNewAccountName("");
+      setNewAccountInitialBalance("0");
+      setNewAccountIncludeInMonthlySummary(true);
+      setNewAccountTarget(null);
     } else {
       form.reset({
         date: toDateInputValue(new Date()),
@@ -175,6 +210,11 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
         reminder: "none",
       });
       setRepeatMode("none");
+      setCreatingAccount(false);
+      setNewAccountName("");
+      setNewAccountInitialBalance("0");
+      setNewAccountIncludeInMonthlySummary(true);
+      setNewAccountTarget(null);
     }
   }, [open, transaction, form]);
 
@@ -363,7 +403,45 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
   };
 
   const handleSubmit = form.handleSubmit(async (values) => {
+    let accountId = values.account_id ?? null;
+    let accountFromId = values.account_from_id ?? null;
+    let accountToId = values.account_to_id ?? null;
     let categoryId = values.category_id ?? null;
+
+    if (creatingAccount && !newAccountName.trim()) {
+      if (newAccountTarget) {
+        form.setError(newAccountTarget, { type: "custom", message: "Informe a nova conta" });
+      }
+      return;
+    }
+    if (creatingAccount && newAccountName.trim()) {
+      const createdAccount = await createAccount.mutateAsync({
+        name: newAccountName.trim(),
+        initial_balance: parseCurrency(newAccountInitialBalance),
+        archived: false,
+        include_in_monthly_summary: newAccountIncludeInMonthlySummary,
+      });
+      if (newAccountTarget === "account_from_id") {
+        accountFromId = createdAccount.id;
+        form.setValue("account_from_id", createdAccount.id);
+      } else if (newAccountTarget === "account_to_id") {
+        accountToId = createdAccount.id;
+        form.setValue("account_to_id", createdAccount.id);
+      } else {
+        accountId = createdAccount.id;
+        form.setValue("account_id", createdAccount.id);
+      }
+      setCreatingAccount(false);
+      setNewAccountName("");
+      setNewAccountInitialBalance("0");
+      setNewAccountIncludeInMonthlySummary(true);
+      setNewAccountTarget(null);
+    }
+
+    if (creatingCategory && !newCategoryName.trim()) {
+      form.setError("category_id", { type: "custom", message: "Informe a nova categoria" });
+      return;
+    }
     if (creatingCategory && newCategoryName.trim()) {
       const created = await createCategory.mutateAsync({
         name: newCategoryName.trim(),
@@ -371,6 +449,10 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
         allowed_type: newCategoryType,
       });
       categoryId = created.id;
+      form.setValue("category_id", created.id);
+      setCreatingCategory(false);
+      setNewCategoryName("");
+      setNewCategoryParent(null);
     }
 
     const baseDate = new Date(`${values.date}T00:00:00`);
@@ -382,9 +464,9 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
       note: values.note || null,
       type: values.type,
       amount,
-      account_id: values.type === "transfer" ? null : values.account_id ?? null,
-      account_from_id: values.type === "transfer" ? values.account_from_id ?? null : null,
-      account_to_id: values.type === "transfer" ? values.account_to_id ?? null : null,
+      account_id: values.type === "transfer" ? null : accountId,
+      account_from_id: values.type === "transfer" ? accountFromId : null,
+      account_to_id: values.type === "transfer" ? accountToId : null,
       category_id: values.type === "transfer" ? null : categoryId,
       cleared: Boolean(values.cleared),
       installment_group_id: null,
@@ -431,6 +513,11 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
       form.reset();
       setConfirmOpen(false);
       setPendingPayload(null);
+      setCreatingAccount(false);
+      setNewAccountName("");
+      setNewAccountInitialBalance("0");
+      setNewAccountIncludeInMonthlySummary(true);
+      setNewAccountTarget(null);
       onClose();
       return;
     }
@@ -478,6 +565,11 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
     form.reset();
     setCreatingCategory(false);
     setNewCategoryName("");
+    setCreatingAccount(false);
+    setNewAccountName("");
+    setNewAccountInitialBalance("0");
+    setNewAccountIncludeInMonthlySummary(true);
+    setNewAccountTarget(null);
     onClose();
   });
 
@@ -506,10 +598,12 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
           <label className="space-y-1 text-sm text-ink-700">
             Data
             <Input type="date" {...form.register("date")} />
+            {renderError(errors.date?.message)}
           </label>
           <label className="space-y-1 text-sm text-ink-700">
             Descricao
             <Input placeholder="Ex: Supermercado" {...form.register("description")} />
+            {renderError(errors.description?.message)}
           </label>
         </div>
 
@@ -551,7 +645,7 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
                   const value = event.target.value;
                   if (value === "__new__") {
                     setCreatingCategory(true);
-                    form.setValue("category_id", "");
+                    form.setValue("category_id", "__new__");
                   } else {
                     setCreatingCategory(false);
                     form.setValue("category_id", value);
@@ -566,42 +660,97 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
                 ))}
                 <option value="__new__">Nova categoria...</option>
               </Select>
+              {renderError(errors.category_id?.message)}
             </label>
             <label className="space-y-1 text-sm text-ink-700">
               Conta
-              <Select {...form.register("account_id")}>
+              <Select
+                {...form.register("account_id")}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (value === "__new__") {
+                    setCreatingAccount(true);
+                    setNewAccountTarget("account_id");
+                    form.setValue("account_id", "__new__");
+                  } else {
+                    form.setValue("account_id", value);
+                    if (newAccountTarget === "account_id") {
+                      setCreatingAccount(false);
+                      setNewAccountTarget(null);
+                    }
+                  }
+                }}
+              >
                 <option value="">Selecione</option>
                 {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name}
                   </option>
                 ))}
+                <option value="__new__">Nova conta...</option>
               </Select>
+              {renderError(errors.account_id?.message)}
             </label>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-1 text-sm text-ink-700">
               Conta de origem
-              <Select {...form.register("account_from_id")}>
+              <Select
+                {...form.register("account_from_id")}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (value === "__new__") {
+                    setCreatingAccount(true);
+                    setNewAccountTarget("account_from_id");
+                    form.setValue("account_from_id", "__new__");
+                  } else {
+                    form.setValue("account_from_id", value);
+                    if (newAccountTarget === "account_from_id") {
+                      setCreatingAccount(false);
+                      setNewAccountTarget(null);
+                    }
+                  }
+                }}
+              >
                 <option value="">Selecione</option>
                 {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name}
                   </option>
                 ))}
+                <option value="__new__">Nova conta...</option>
               </Select>
+              {renderError(errors.account_from_id?.message)}
             </label>
             <label className="space-y-1 text-sm text-ink-700">
               Conta de destino
-              <Select {...form.register("account_to_id")}>
+              <Select
+                {...form.register("account_to_id")}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (value === "__new__") {
+                    setCreatingAccount(true);
+                    setNewAccountTarget("account_to_id");
+                    form.setValue("account_to_id", "__new__");
+                  } else {
+                    form.setValue("account_to_id", value);
+                    if (newAccountTarget === "account_to_id") {
+                      setCreatingAccount(false);
+                      setNewAccountTarget(null);
+                    }
+                  }
+                }}
+              >
                 <option value="">Selecione</option>
                 {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name}
                   </option>
                 ))}
+                <option value="__new__">Nova conta...</option>
               </Select>
+              {renderError(errors.account_to_id?.message)}
             </label>
           </div>
         )}
@@ -612,6 +761,7 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
               <label className="space-y-1 text-xs text-ink-600">
                 Nova categoria
                 <Input value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} />
+                {renderError(errors.category_id?.message)}
               </label>
               <label className="space-y-1 text-xs text-ink-600">
                 Categoria pai
@@ -639,10 +789,37 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
           </div>
         ) : null}
 
+        {creatingAccount ? (
+          <div className="rounded-xl border border-dashed border-ink-200 bg-sand-50 p-3">
+            <div className="grid gap-3 md:grid-cols-3">
+              <label className="space-y-1 text-xs text-ink-600">
+                Nova conta
+                <Input value={newAccountName} onChange={(event) => setNewAccountName(event.target.value)} />
+                {renderError(accountTargetError)}
+              </label>
+              <label className="space-y-1 text-xs text-ink-600">
+                Saldo inicial
+                <Input
+                  value={newAccountInitialBalance}
+                  onChange={(event) => setNewAccountInitialBalance(event.target.value)}
+                />
+              </label>
+              <div className="flex items-center">
+                <Checkbox
+                  label="Incluir no resumo do mes"
+                  checked={newAccountIncludeInMonthlySummary}
+                  onChange={(event) => setNewAccountIncludeInMonthlySummary(event.target.checked)}
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-1 text-sm text-ink-700">
             Valor (R$)
             <Input placeholder="0,00" {...form.register("amount")} />
+            {renderError(errors.amount?.message)}
           </label>
           <label className="space-y-1 text-sm text-ink-700">
             Lembrete por e-mail
