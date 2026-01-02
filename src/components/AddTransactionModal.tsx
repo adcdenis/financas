@@ -29,7 +29,7 @@ const transactionSchema = z
     amount: z.string().min(1),
     note: z.string().optional(),
     cleared: z.boolean().optional(),
-    reminder: z.enum(["none", "email"]).default("none"),
+    reminder: z.enum(["none", "0", "1", "3"]).default("none"),
   })
   .superRefine((values, ctx) => {
     if (values.type === "transfer") {
@@ -158,6 +158,12 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
     if (!open) return;
     if (transaction) {
       const amountLabel = transaction.amount.toFixed(2).replace(".", ",");
+      const reminderValue =
+        transaction.reminder_offset_days === 0 ||
+        transaction.reminder_offset_days === 1 ||
+        transaction.reminder_offset_days === 3
+          ? String(transaction.reminder_offset_days)
+          : "none";
       form.reset({
         date: transaction.date.slice(0, 10),
         description: transaction.description,
@@ -169,7 +175,7 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
         amount: amountLabel,
         note: transaction.note ?? "",
         cleared: transaction.cleared,
-        reminder: "none",
+        reminder: reminderValue,
       });
       if (transaction.installment_group_id) {
         setRepeatMode("installment");
@@ -457,6 +463,7 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
 
     const baseDate = new Date(`${values.date}T00:00:00`);
     const amount = parseCurrency(values.amount);
+    const reminderOffset = values.reminder === "none" ? null : Number(values.reminder);
 
     const basePayload: TransactionInsert = {
       date: values.date,
@@ -469,6 +476,9 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
       account_to_id: values.type === "transfer" ? accountToId : null,
       category_id: values.type === "transfer" ? null : categoryId,
       cleared: Boolean(values.cleared),
+      reminder_offset_days: reminderOffset,
+      reminder_date: null,
+      reminder_sent_at: null,
       installment_group_id: null,
       installment_index: null,
       installment_total: null,
@@ -488,6 +498,7 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
         account_to_id: basePayload.account_to_id,
         category_id: basePayload.category_id,
         cleared: basePayload.cleared,
+        reminder_offset_days: basePayload.reminder_offset_days,
         installment_total: hasInstallments ? Math.max(1, installmentTotal) : transaction.installment_total,
         recurrence_rule:
           repeatMode === "advanced"
@@ -825,7 +836,9 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
             Lembrete por e-mail
             <Select {...form.register("reminder")}>
               <option value="none">Nenhum</option>
-              <option value="email">Opcional</option>
+              <option value="0">No dia</option>
+              <option value="1">1 dia antes</option>
+              <option value="3">3 dias antes</option>
             </Select>
           </label>
         </div>

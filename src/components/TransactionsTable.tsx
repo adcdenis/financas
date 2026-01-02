@@ -48,22 +48,22 @@ const TransactionsTable = ({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl bg-white/90 shadow-soft">
-      <table className="w-full border-collapse text-sm">
+    <div className="overflow-x-auto rounded-2xl bg-white/90 shadow-soft">
+      <table className="w-full min-w-[720px] border-collapse text-sm">
         <thead className="bg-sand-100 text-ink-600">
           <tr>
-            <th className="px-4 py-3 text-left font-medium">
+            <th className="px-3 py-2 text-left font-medium sm:px-4 sm:py-3">
               <Checkbox
                 checked={transactions.length > 0 && selectedIds.length === transactions.length}
                 onChange={(event) => onToggleSelectAll(transactions.map((t) => t.id), event.target.checked)}
                 onClick={(event) => event.stopPropagation()}
               />
             </th>
-            <th className="px-4 py-3 text-left font-medium">Descricao</th>
-            <th className="px-4 py-3 text-left font-medium">Categoria</th>
-            <th className="px-4 py-3 text-left font-medium">Conta</th>
-            <th className="px-4 py-3 text-right font-medium">Valor (R$)</th>
-            <th className="px-4 py-3 text-center font-medium">Consolidado</th>
+            <th className="px-3 py-2 text-left font-medium sm:px-4 sm:py-3">Descricao</th>
+            <th className="px-3 py-2 text-left font-medium sm:px-4 sm:py-3">Categoria</th>
+            <th className="px-3 py-2 text-left font-medium sm:px-4 sm:py-3">Conta</th>
+            <th className="px-3 py-2 text-right font-medium sm:px-4 sm:py-3">Valor (R$)</th>
+            <th className="px-3 py-2 text-center font-medium sm:px-4 sm:py-3">Consolidado</th>
           </tr>
         </thead>
         <tbody>
@@ -80,7 +80,10 @@ const TransactionsTable = ({
             return (
               <React.Fragment key={dayKey}>
                 <tr className="bg-sand-50">
-                  <td colSpan={6} className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-ink-500">
+                  <td
+                    colSpan={6}
+                    className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-ink-500 sm:px-4 sm:py-3"
+                  >
                     {format(dayDate, "dd/MM/yyyy, EEEE", { locale: ptBR })}
                   </td>
                 </tr>
@@ -102,14 +105,14 @@ const TransactionsTable = ({
                       className="cursor-pointer border-t border-sand-100 hover:bg-sand-50/60"
                       onClick={() => onEdit(transaction)}
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2 sm:px-4 sm:py-3">
                         <Checkbox
                           checked={selectedIds.includes(transaction.id)}
                           onChange={() => onToggleSelect(transaction.id)}
                           onClick={(event) => event.stopPropagation()}
                         />
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2 sm:px-4 sm:py-3">
                         <div className="font-medium text-ink-900">{transaction.description}</div>
                         {transaction.installment_total ? (
                           <div className="text-xs text-ink-400">
@@ -117,32 +120,53 @@ const TransactionsTable = ({
                           </div>
                         ) : null}
                       </td>
-                      <td className="px-4 py-3 text-ink-600">{categoryLabel}</td>
-                      <td className="px-4 py-3 text-ink-600">{accountLabel}</td>
-                      <td className="px-4 py-3 text-right font-mono text-ink-900">
+                      <td className="px-3 py-2 text-ink-600 sm:px-4 sm:py-3">{categoryLabel}</td>
+                      <td className="px-3 py-2 text-ink-600 sm:px-4 sm:py-3">{accountLabel}</td>
+                      <td className="px-3 py-2 text-right font-mono text-ink-900 sm:px-4 sm:py-3">
                         {transaction.type === "expense" ? "-" : ""}
                         {transaction.type === "transfer" ? "--" : formatCurrency(transaction.amount)}
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={transaction.cleared}
-                          onChange={(event) => onToggleCleared(transaction.id, event.target.checked)}
-                          onClick={(event) => event.stopPropagation()}
-                        />
+                      <td className="px-3 py-2 text-center sm:px-4 sm:py-3">
+                        <button
+                          type="button"
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition ${
+                            transaction.cleared
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-sand-100 text-ink-400 hover:text-ink-600"
+                          }`}
+                          aria-pressed={transaction.cleared}
+                          aria-label={transaction.cleared ? "Transacao consolidada" : "Transacao nao consolidada"}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onToggleCleared(transaction.id, !transaction.cleared);
+                          }}
+                        >
+                          {transaction.cleared ? (
+                            <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+                              <path
+                                fill="currentColor"
+                                d="M9.55 17.2 5.4 13.05l1.4-1.4 2.75 2.75 6.65-6.65 1.4 1.4z"
+                              />
+                            </svg>
+                          ) : (
+                            <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+                              <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
+                            </svg>
+                          )}
+                        </button>
                       </td>
                     </tr>
                   );
                 })}
                 <tr className="border-t border-sand-200 bg-sand-50">
-                  <td className="px-4 py-3 text-xs uppercase text-ink-500" colSpan={4}>
+                  <td className="px-3 py-2 text-xs uppercase text-ink-500 sm:px-4 sm:py-3" colSpan={4}>
                     Saldo do dia
                     <span className="ml-3 text-[11px] text-ink-400">Movimento do dia: {formatCurrency(dayTotal)}</span>
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-sm font-semibold text-ink-900">
+                  <td className="px-3 py-2 text-right font-mono text-sm font-semibold text-ink-900 sm:px-4 sm:py-3">
                     {formatCurrency(cumulative)}
                   </td>
-                  <td className="px-4 py-3" />
+                  <td className="px-3 py-2 sm:px-4 sm:py-3" />
                 </tr>
               </React.Fragment>
             );

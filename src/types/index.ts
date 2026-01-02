@@ -32,6 +32,9 @@ export interface Transaction {
   account_to_id: string | null;
   category_id: string | null;
   cleared: boolean;
+  reminder_offset_days: number | null;
+  reminder_date: string | null;
+  reminder_sent_at: string | null;
   installment_group_id: string | null;
   installment_index: number | null;
   installment_total: number | null;
