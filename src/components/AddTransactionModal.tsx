@@ -158,11 +158,11 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
     if (!open) return;
     if (transaction) {
       const amountLabel = transaction.amount.toFixed(2).replace(".", ",");
-      const reminderValue =
+      const reminderValue: TransactionForm["reminder"] =
         transaction.reminder_offset_days === 0 ||
         transaction.reminder_offset_days === 1 ||
         transaction.reminder_offset_days === 3
-          ? String(transaction.reminder_offset_days)
+          ? (String(transaction.reminder_offset_days) as TransactionForm["reminder"])
           : "none";
       form.reset({
         date: transaction.date.slice(0, 10),
