@@ -539,10 +539,14 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
       const groupId = crypto.randomUUID();
       const startIndex = Math.max(1, installmentStart);
       const total = Math.max(startIndex, installmentTotal);
+      const perInstallmentAmount = Number((amount / total).toFixed(2));
+      const remainder = Number((amount - perInstallmentAmount * total).toFixed(2));
 
       for (let index = startIndex; index <= total; index += 1) {
+        const installmentAmount = index === total ? perInstallmentAmount + remainder : perInstallmentAmount;
         rows.push({
           ...basePayload,
+          amount: installmentAmount,
           date: toDateString(addMonths(baseDate, index - startIndex)),
           installment_group_id: groupId,
           installment_index: index,

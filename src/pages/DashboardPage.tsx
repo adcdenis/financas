@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { startOfMonth } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import SidebarAccounts from "../components/SidebarAccounts";
 import SidebarCategoriesTree from "../components/SidebarCategoriesTree";
 import QuickSearch from "../components/QuickSearch";
@@ -9,6 +10,7 @@ import TransactionsTable from "../components/TransactionsTable";
 import AddTransactionModal from "../components/AddTransactionModal";
 import ExportCSVButton from "../components/ExportCSVButton";
 import { Button } from "../components/ui/Button";
+import { Modal } from "../components/ui/Modal";
 import { Select } from "../components/ui/Select";
 import { useAccounts } from "../features/accounts/accountsHooks";
 import { useCategories } from "../features/categories/categoriesHooks";
@@ -20,11 +22,15 @@ import {
 } from "../features/transactions/transactionsHooks";
 import { expandCategorySelection } from "../lib/categoryTree";
 import { formatCurrency } from "../lib/utils";
+import { supabase } from "../lib/supabaseClient";
 import type { Transaction } from "../types";
 import appPackage from "../../package.json";
 
+type DeleteScope = "only" | "from_here" | "from_first";
+
 const DashboardPage = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const appVersion = appPackage.version;
   const [month, setMonth] = useState(startOfMonth(new Date()));
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
@@ -35,6 +41,9 @@ const DashboardPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [selectedTransactionIds, setSelectedTransactionIds] = useState<string[]>([]);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteScope, setDeleteScope] = useState<DeleteScope>("only");
+  const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
 
   const { data: accounts = [], isLoading: accountsLoading } = useAccounts();
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
@@ -84,6 +93,19 @@ const DashboardPage = () => {
     return map;
   }, [accounts, transactions]);
 
+  const selectedTransactions = useMemo(
+    () => transactions.filter((transaction) => selectedTransactionIds.includes(transaction.id)),
+    [transactions, selectedTransactionIds]
+  );
+
+  useEffect(() => {
+    if (selectedTransactionIds.length === 0) return;
+    const availableIds = new Set(transactions.map((transaction) => transaction.id));
+    const filtered = selectedTransactionIds.filter((id) => availableIds.has(id));
+    if (filtered.length === selectedTransactionIds.length) return;
+    setSelectedTransactionIds(filtered);
+  }, [transactions, selectedTransactionIds]);
+
   const monthlySummaryTotal = useMemo(
     () =>
       accounts.reduce((sum, account) => {
@@ -101,11 +123,74 @@ const DashboardPage = () => {
     setSelectedTransactionIds(checked ? ids : []);
   };
 
+  const closeDeleteModal = () => {
+    setDeleteModalOpen(false);
+    setDeleteScope("only");
+    setDeleteTarget(null);
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!deleteTarget) return;
+
+    if (deleteScope === "only") {
+      await deleteTransactions.mutateAsync([deleteTarget.id]);
+      closeDeleteModal();
+      setSelectedTransactionIds([]);
+      return;
+    }
+
+    if (deleteTarget.installment_group_id) {
+      let query = supabase
+        .from("transactions")
+        .delete()
+        .eq("installment_group_id", deleteTarget.installment_group_id);
+
+      if (deleteScope === "from_here") {
+        query = query.gte("installment_index", deleteTarget.installment_index ?? 1);
+      }
+
+      const { error } = await query;
+      if (error) throw error;
+    } else if (deleteTarget.recurrence_group_id) {
+      let query = supabase
+        .from("transactions")
+        .delete()
+        .eq("recurrence_group_id", deleteTarget.recurrence_group_id);
+
+      if (deleteScope === "from_here") {
+        query = query.gte("date", deleteTarget.date.slice(0, 10));
+      }
+
+      const { error } = await query;
+      if (error) throw error;
+    }
+
+    await queryClient.invalidateQueries({ queryKey: ["transactions"] });
+    closeDeleteModal();
+    setSelectedTransactionIds([]);
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedTransactions.length === 0) return;
+    if (selectedTransactions.length === 1) {
+      const target = selectedTransactions[0];
+      if (target.installment_group_id || target.recurrence_group_id) {
+        setDeleteTarget(target);
+        setDeleteScope("only");
+        setDeleteModalOpen(true);
+        return;
+      }
+    }
+    if (!window.confirm("Excluir transacoes selecionadas?")) return;
+    deleteTransactions.mutate(selectedTransactions.map((transaction) => transaction.id));
+    setSelectedTransactionIds([]);
+  };
+
   return (
     <div className="grid min-h-[calc(100vh-72px)] grid-cols-1 gap-6 px-6 pb-10 lg:grid-cols-[320px_1fr]">
       <aside className="space-y-4">
         <div className="rounded-2xl bg-ink-900 p-4 text-white shadow-card">
-          <div className="text-xs uppercase tracking-wide text-ink-200">Resumo do mes</div>
+          <div className="text-xs uppercase tracking-wide text-ink-200">Resumo do Mês</div>
           <div className="mt-2 text-2xl font-semibold">
             {formatCurrency(monthlySummaryTotal)}
           </div>
@@ -134,10 +219,10 @@ const DashboardPage = () => {
           <div className="flex flex-wrap items-center gap-3">
             <Select value={unclearedOnly ? "uncleared" : "all"} onChange={(event) => setUnclearedOnly(event.target.value === "uncleared")}
               >
-              <option value="all">Todas transacoes</option>
-              <option value="uncleared">Transacoes nao consolidadas</option>
+              <option value="all">Todas as Transações</option>
+              <option value="uncleared">Transações não Consolidadas</option>
             </Select>
-            <Button onClick={() => setModalOpen(true)}>Adicionar transacao</Button>
+            <Button onClick={() => setModalOpen(true)}>Adicionar Transação</Button>
             <Button
               variant="secondary"
               disabled={selectedTransactionIds.length === 0}
@@ -158,17 +243,12 @@ const DashboardPage = () => {
                 setSelectedTransactionIds([]);
               }}
             >
-              Tirar consolidacao
+              Tirar Consolidação
             </Button>
             <Button
               variant="danger"
               disabled={selectedTransactionIds.length === 0}
-              onClick={() => {
-                if (selectedTransactionIds.length === 0) return;
-                if (!window.confirm("Excluir transacoes selecionadas?")) return;
-                deleteTransactions.mutate(selectedTransactionIds);
-                setSelectedTransactionIds([]);
-              }}
+              onClick={handleDeleteSelected}
             >
               Excluir
             </Button>
@@ -194,7 +274,7 @@ const DashboardPage = () => {
               onToggleSelectAll={handleToggleAllTransactions}
             />
             <div className="px-2 text-right text-xs text-ink-400">
-              Copyright © 2025 Finanças Desktop · v{appVersion}
+              Copyright © 2025 Minhas Finanças · v{appVersion}
             </div>
           </>
         )}
@@ -210,6 +290,52 @@ const DashboardPage = () => {
         categories={categories}
         transaction={editingTransaction}
       />
+
+      <Modal
+        open={deleteModalOpen}
+        onClose={closeDeleteModal}
+        title="Excluir transacao"
+        footer={
+          <>
+            <Button variant="ghost" onClick={closeDeleteModal}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleDeleteGroup}>
+              Excluir
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-ink-600">
+          Esta transacao possui repeticao. Qual acao deseja executar?
+        </p>
+        <div className="mt-4 space-y-2 text-sm text-ink-700">
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={deleteScope === "only"}
+              onChange={() => setDeleteScope("only")}
+            />
+            Excluir apenas esta
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={deleteScope === "from_here"}
+              onChange={() => setDeleteScope("from_here")}
+            />
+            Excluir a partir desta
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={deleteScope === "from_first"}
+              onChange={() => setDeleteScope("from_first")}
+            />
+            Excluir todas
+          </label>
+        </div>
+      </Modal>
     </div>
   );
 };

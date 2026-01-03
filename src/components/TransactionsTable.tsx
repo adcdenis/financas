@@ -59,7 +59,7 @@ const TransactionsTable = ({
                 onClick={(event) => event.stopPropagation()}
               />
             </th>
-            <th className="px-3 py-2 text-left font-medium sm:px-4 sm:py-3">Descricao</th>
+            <th className="px-3 py-2 text-left font-medium sm:px-4 sm:py-3">Descrição</th>
             <th className="px-3 py-2 text-left font-medium sm:px-4 sm:py-3">Categoria</th>
             <th className="px-3 py-2 text-left font-medium sm:px-4 sm:py-3">Conta</th>
             <th className="px-3 py-2 text-right font-medium sm:px-4 sm:py-3">Valor (R$)</th>
@@ -122,7 +122,15 @@ const TransactionsTable = ({
                       </td>
                       <td className="px-3 py-2 text-ink-600 sm:px-4 sm:py-3">{categoryLabel}</td>
                       <td className="px-3 py-2 text-ink-600 sm:px-4 sm:py-3">{accountLabel}</td>
-                      <td className="px-3 py-2 text-right font-mono text-ink-900 sm:px-4 sm:py-3">
+                      <td
+                        className={`px-3 py-2 text-right font-mono sm:px-4 sm:py-3 ${
+                          transaction.type === "expense"
+                            ? "text-red-600"
+                            : transaction.type === "income"
+                              ? "text-ink-900"
+                              : "text-ink-400"
+                        }`}
+                      >
                         {transaction.type === "expense" ? "-" : ""}
                         {transaction.type === "transfer" ? "--" : formatCurrency(transaction.amount)}
                       </td>
@@ -134,6 +142,7 @@ const TransactionsTable = ({
                               ? "bg-emerald-100 text-emerald-700"
                               : "bg-sand-100 text-ink-400 hover:text-ink-600"
                           }`}
+                          title={transaction.cleared ? "Clique para desconsolidar" : "Clique para consolidar"}
                           aria-pressed={transaction.cleared}
                           aria-label={transaction.cleared ? "Transacao consolidada" : "Transacao nao consolidada"}
                           onClick={(event) => {
