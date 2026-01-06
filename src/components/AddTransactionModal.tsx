@@ -29,7 +29,7 @@ const transactionSchema = z
     amount: z.string().min(1),
     note: z.string().optional(),
     cleared: z.boolean().optional(),
-    reminder: z.enum(["none", "0", "1", "3"]).default("none"),
+    reminder: z.enum(["none", "0", "1", "2", "3"]).default("none"),
   })
   .superRefine((values, ctx) => {
     if (values.type === "transfer") {
@@ -161,6 +161,7 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
       const reminderValue: TransactionForm["reminder"] =
         transaction.reminder_offset_days === 0 ||
         transaction.reminder_offset_days === 1 ||
+        transaction.reminder_offset_days === 2 ||
         transaction.reminder_offset_days === 3
           ? (String(transaction.reminder_offset_days) as TransactionForm["reminder"])
           : "none";
@@ -842,6 +843,7 @@ const AddTransactionModal = ({ open, onClose, accounts, categories, transaction 
               <option value="none">Nenhum</option>
               <option value="0">No dia</option>
               <option value="1">1 dia antes</option>
+              <option value="2">2 dias antes</option>
               <option value="3">3 dias antes</option>
             </Select>
           </label>
