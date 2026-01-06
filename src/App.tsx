@@ -6,7 +6,9 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import DashboardPage from "./pages/DashboardPage";
 import SettingsAccountsPage from "./pages/SettingsAccountsPage";
 import SettingsCategoriesPage from "./pages/SettingsCategoriesPage";
+import SettingsUsersPage from "./pages/SettingsUsersPage";
 import AppLayout from "./pages/AppLayout";
+import { useAdminStatus } from "./features/admin/adminHooks";
 
 const App = () => {
   const [sessionReady, setSessionReady] = useState(false);
@@ -42,6 +44,21 @@ const App = () => {
     return children;
   };
 
+  const AdminGate = ({ children }: { children: JSX.Element }) => {
+    const { data: adminStatus, isLoading } = useAdminStatus({ enabled: Boolean(session) });
+    if (isLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center text-ink-600">
+          Carregando...
+        </div>
+      );
+    }
+    if (!adminStatus?.isAdmin) {
+      return <Navigate to="/app" replace />;
+    }
+    return children;
+  };
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -57,6 +74,14 @@ const App = () => {
         <Route index element={<DashboardPage />} />
         <Route path="settings/accounts" element={<SettingsAccountsPage />} />
         <Route path="settings/categories" element={<SettingsCategoriesPage />} />
+        <Route
+          path="settings/users"
+          element={
+            <AdminGate>
+              <SettingsUsersPage />
+            </AdminGate>
+          }
+        />
       </Route>
       <Route path="*" element={<Navigate to="/app" replace />} />
     </Routes>

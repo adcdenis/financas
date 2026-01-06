@@ -1,9 +1,11 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { Button } from "../components/ui/Button";
+import { useAdminStatus } from "../features/admin/adminHooks";
 
 const AppLayout = () => {
   const navigate = useNavigate();
+  const { data: adminStatus } = useAdminStatus();
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -30,6 +32,14 @@ const AppLayout = () => {
           >
             Categorias
           </NavLink>
+          {adminStatus?.isAdmin ? (
+            <NavLink
+              to="/app/settings/users"
+              className={({ isActive }) => (isActive ? "text-ink-900" : "")}
+            >
+              Usuarios
+            </NavLink>
+          ) : null}
           <Button variant="ghost" onClick={handleSignOut}>
             Sair
           </Button>
