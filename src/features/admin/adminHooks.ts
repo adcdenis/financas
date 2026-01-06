@@ -8,7 +8,12 @@ import {
   unblockAdminUser,
 } from "./adminApi";
 
-export const useAdminStatus = (options?: UseQueryOptions<AdminStatus>) =>
+type AdminStatusQueryOptions = Omit<
+  UseQueryOptions<AdminStatus, Error, AdminStatus, readonly unknown[]>,
+  "queryKey" | "queryFn"
+>;
+
+export const useAdminStatus = (options?: AdminStatusQueryOptions) =>
   useQuery({
     queryKey: ["admin-status"],
     queryFn: fetchAdminStatus,
