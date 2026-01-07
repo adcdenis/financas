@@ -69,6 +69,20 @@ VITE_SUPABASE_URL=seu-supabase-url
 VITE_SUPABASE_ANON_KEY=sua-chave-anonima
 ```
 
+### Supabase functions (reminders)
+Para o job `supabase/functions/send-transaction-reminders`, configure:
+
+```env
+REMINDER_TIMEZONE=America/Sao_Paulo
+REMINDER_ALLOW_REPEAT=true
+REMINDER_MAX_OFFSET_DAYS=3
+REMINDER_DEBUG=false
+REMINDER_FROM_EMAIL=seu-remetente
+RESEND_API_KEY=sua-chave-resend
+SB_URL=seu-supabase-url
+SB_SERVICE_ROLE_KEY=sua-chave-service-role
+```
+
 ### 4. Inicie o servidor de desenvolvimento
 ```bash
 npm run dev
