@@ -10,6 +10,9 @@ const LoginPage = () => {
   const resetRedirect =
     (import.meta.env.VITE_SUPABASE_RESET_REDIRECT_URL as string | undefined) ??
     `${window.location.origin}/reset-password`;
+  const confirmRedirect =
+    (import.meta.env.VITE_SUPABASE_CONFIRM_REDIRECT_URL as string | undefined) ??
+    `${window.location.origin}/app`;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -61,7 +64,11 @@ const LoginPage = () => {
     const result =
       mode === "signin"
         ? await supabase.auth.signInWithPassword({ email: trimmedEmail, password })
-        : await supabase.auth.signUp({ email: trimmedEmail, password });
+        : await supabase.auth.signUp({
+            email: trimmedEmail,
+            password,
+            options: { emailRedirectTo: confirmRedirect },
+          });
 
     setLoading(false);
     if (result.error) {
